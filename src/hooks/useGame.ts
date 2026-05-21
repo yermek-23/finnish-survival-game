@@ -4,6 +4,7 @@ import type { GameEvent, StatKey, Stats } from '../types/game'
 import { INITIAL_STATS } from '../types/game'
 import {
   applyEffects,
+  applyPanicPenalty,
   getFailedStat,
   pickRandomEvent,
   shouldShowInterstitial,
@@ -15,6 +16,12 @@ interface UseGameOptions {
   premium: boolean
 }
 
+type Snapshot = {
+  stats: Stats
+  day: number
+  usedEventIds: Set<string>
+}
+
 export function useGame({ premium }: UseGameOptions) {
   const [day, setDay] = useState(1)
   const [stats, setStats] = useState<Stats>(INITIAL_STATS)
@@ -24,12 +31,8 @@ export function useGame({ premium }: UseGameOptions) {
   const [usedEventIds, setUsedEventIds] = useState<Set<string>>(new Set())
   const [phase, setPhase] = useState<GamePhase>('playing')
   const [failedStat, setFailedStat] = useState<StatKey | null>(null)
-  const [savedSnapshot, setSavedSnapshot] = useState<{
-    stats: Stats
-    day: number
-    event: GameEvent
-    usedEventIds: Set<string>
-  } | null>(null)
+  const [panicFlash, setPanicFlash] = useState(false)
+  const [savedSnapshot, setSavedSnapshot] = useState<Snapshot | null>(null)
 
   const loadNextEvent = useCallback(
     (ids: Set<string>) => {
@@ -40,25 +43,22 @@ export function useGame({ premium }: UseGameOptions) {
     [premium],
   )
 
-  const makeChoice = useCallback(
-    (choice: 'a' | 'b') => {
-      const effects = choice === 'a' ? event.choiceA.effects : event.choiceB.effects
-      const newStats = applyEffects(stats, effects)
-      const fail = getFailedStat(newStats)
-
-      const newUsed = new Set(usedEventIds)
-      newUsed.add(event.id)
+  const resolveTurn = useCallback(
+    (newStats: Stats, currentDay: number, ids: Set<string>, eventId: string) => {
+      const newUsed = new Set(ids)
+      newUsed.add(eventId)
       setUsedEventIds(newUsed)
       setStats(newStats)
 
+      const fail = getFailedStat(newStats)
       if (fail) {
         setFailedStat(fail)
-        setSavedSnapshot({ stats: newStats, day, event, usedEventIds: newUsed })
+        setSavedSnapshot({ stats: newStats, day: currentDay, usedEventIds: newUsed })
         setPhase('interstitial')
         return
       }
 
-      const nextDay = day + 1
+      const nextDay = currentDay + 1
       setDay(nextDay)
 
       if (shouldShowInterstitial(nextDay, false)) {
@@ -69,8 +69,27 @@ export function useGame({ premium }: UseGameOptions) {
 
       loadNextEvent(newUsed)
     },
-    [day, event, loadNextEvent, stats, usedEventIds],
+    [loadNextEvent],
   )
+
+  const makeChoice = useCallback(
+    (choice: 'a' | 'b') => {
+      if (phase !== 'playing' || panicFlash) return
+      const effects = choice === 'a' ? event.choiceA.effects : event.choiceB.effects
+      resolveTurn(applyEffects(stats, effects), day, usedEventIds, event.id)
+    },
+    [day, event, panicFlash, phase, resolveTurn, stats, usedEventIds],
+  )
+
+  const triggerPanic = useCallback(() => {
+    if (phase !== 'playing' || panicFlash) return
+    setPanicFlash(true)
+    const penalized = applyPanicPenalty(stats)
+    window.setTimeout(() => {
+      setPanicFlash(false)
+      resolveTurn(penalized, day, usedEventIds, event.id)
+    }, 1400)
+  }, [day, event.id, panicFlash, phase, resolveTurn, stats, usedEventIds])
 
   const dismissInterstitial = useCallback(() => {
     if (failedStat) {
@@ -84,12 +103,12 @@ export function useGame({ premium }: UseGameOptions) {
     if (!savedSnapshot) return
     setStats(savedSnapshot.stats)
     setDay(savedSnapshot.day)
-    setEvent(savedSnapshot.event)
     setUsedEventIds(savedSnapshot.usedEventIds)
     setFailedStat(null)
     setPhase('playing')
     setSavedSnapshot(null)
-  }, [savedSnapshot])
+    loadNextEvent(savedSnapshot.usedEventIds)
+  }, [loadNextEvent, savedSnapshot])
 
   const restart = useCallback(() => {
     setDay(1)
@@ -97,6 +116,7 @@ export function useGame({ premium }: UseGameOptions) {
     setUsedEventIds(new Set())
     setFailedStat(null)
     setSavedSnapshot(null)
+    setPanicFlash(false)
     setPhase('playing')
     loadNextEvent(new Set())
   }, [loadNextEvent])
@@ -107,8 +127,10 @@ export function useGame({ premium }: UseGameOptions) {
     event,
     phase,
     failedStat,
+    panicFlash,
     hasSecondLife: !!savedSnapshot && !!failedStat,
     makeChoice,
+    triggerPanic,
     dismissInterstitial,
     secondLife,
     restart,

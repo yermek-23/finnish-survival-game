@@ -1,0 +1,46 @@
+import type { GameEvent, StatDelta } from '../types/game'
+
+const e = (
+  id: string,
+  text: string,
+  aLabel: string,
+  aFx: StatDelta,
+  bLabel: string,
+  bFx: StatDelta,
+  premiumOnly?: boolean,
+): GameEvent => ({
+  id,
+  text,
+  choiceA: { label: aLabel, effects: aFx },
+  choiceB: { label: bLabel, effects: bFx },
+  premiumOnly,
+})
+
+export const CLASSIC_EVENTS: GameEvent[] = [
+  e('moose-sauna', 'You met a moose in the sauna. It looks offended.', 'Offer löyly with dignity', { sisu: 20, terveys: -5 }, 'Leave silently (Finnish way)', { mieli: 10, sisu: 5 }),
+  e('prisma-coffee', 'At Prisma checkout you are 20 cents short for coffee.', 'Ask neighbor to spot you', { mieli: -15, raha: 5 }, 'Put coffee back with shame', { mieli: -20, sisu: 15 }),
+  e('kalakukko', 'Someone offered you kalakukko on a first date.', 'Eat it with poker face', { terveys: -10, sisu: 25 }, 'Claim gluten allergy (lie)', { mieli: -10, raha: -5 }),
+  e('midsummer-mosquito', 'Midsummer: mosquitoes formed a union against you.', 'Become one with citronella', { terveys: 5, raha: -15 }, 'Accept bites as character building', { sisu: 20, terveys: -15 }),
+  e('hsl-delay', 'HSL announces: tram delayed because of "vibes".', 'Wait without complaining', { sisu: 25, mieli: -10 }, 'Complain on Twitter in English', { mieli: 5, sisu: -20 }),
+  e('dark-november', 'November: sun forgot your address.', 'Buy SAD lamp on sale', { raha: -20, mieli: 20 }, 'Embrace darkness and mämmi', { mieli: -15, sisu: 15 }),
+  e('ice-fishing', 'Friend invites you to ice fishing at 5 AM.', 'Go and freeze nobly', { sisu: 30, terveys: -10 }, 'Fake food poisoning', { mieli: -5, raha: 10 }),
+  e('kiosk-beer', 'R-Kioski clerk asks if you need a bag for one beer.', 'Say "Ei kiitos" like a local', { sisu: 15, mieli: 10 }, 'Take bag and cry inside', { mieli: -15 }),
+  e('student-overalls', 'Vappu: student in overalls pours you mystery liquid.', 'Drink for culture', { terveys: -25, mieli: 20, sisu: 10 }, 'Pretend to be on antibiotics', { mieli: -5, sisu: 5 }),
+  e('tax-return', 'Verohallinto sent you €42 tax return. Party?', 'Buy karjalanpiirakka feast', { raha: -10, mieli: 25 }, 'Save for winter depression', { raha: 15, mieli: -5 }),
+  e('lidl-queue', 'Lidl Saturday queue reaches Narnia.', 'Queue with stoic face', { sisu: 20, mieli: -10 }, 'Abandon cart and dignity', { mieli: 10, sisu: -15 }),
+  e('korvapuusti-snow', 'You dropped korvapuusti in snow. It is gone forever.', 'Mourn 30 seconds', { mieli: -10, sisu: 10 }, 'Buy replacement immediately', { raha: -15, mieli: 15 }),
+  e('winter-tyres', 'Garage says winter tyres cost "one kidney".', 'Pay and cry later', { raha: -30, terveys: 10 }, 'Drive on summer tyres (brave)', { sisu: 25, terveys: -25 }),
+  e('northern-lights', 'Northern lights appear. Phone battery: 2%.', 'Sacrifice phone for photo', { mieli: 25, terveys: -5 }, 'Watch with eyes only', { sisu: 20, mieli: 10 }),
+  e('office-silent', 'Office lunch: 12 Finns eating in perfect silence.', 'Join the silence cult', { sisu: 20, mieli: -5 }, 'Say "nam" too loudly', { mieli: -30 }),
+  e('alko-queue', 'Alko queue: everyone pretends not to know each other.', 'Stare at floor tiles', { sisu: 10 }, 'Say "nice weather" to stranger', { mieli: -25 }),
+  e('helsinki-rent', 'Helsinki rent ate your soul and sandwich.', 'Move to Turku (joke)', { mieli: 10, raha: -10 }, 'Get third roommate: sauna elf', { raha: 15, mieli: -5 }),
+  e('eurovision', 'Finland wins Eurovision. Nation blinks once.', 'Celebrate with one beer', { mieli: 20, raha: -10 }, 'Continue silence tradition', { sisu: 15 }),
+  e('language-test', 'YKI test tomorrow. You learned "kiitos" and "ei".', 'Cram 500 words tonight', { mieli: -20, sisu: 20 }, 'Wing it with confidence', { mieli: 10, sisu: -10 }),
+  e('posti-queue', 'Posti queue number: 847. Your number: 848.', 'Wait with ancient patience', { sisu: 30, mieli: -15 }, 'Leave package in locker forever', { mieli: 5, raha: -10 }),
+  e('black-ice', 'Black ice teaches you ballet on sidewalk.', 'Embrace fall with dignity', { sisu: 20, terveys: -15 }, 'Crawl to nearest kahvila', { raha: -10, mieli: 10 }),
+  e('tram-ticket', 'Inspector on tram. Ticket in other coat. In Lapland.', 'Accept fine with silence', { raha: -35, sisu: 20 }, 'Perform dramatic faint', { mieli: -15, raha: -20 }),
+  e('midnight-sun', 'Midnight sun: you try to sleep. Sun laughs.', 'Blackout curtains €200', { raha: -25, terveys: 15 }, 'Coffee at 2 AM society', { mieli: -10, terveys: -10 }),
+  e('sisu-test', 'Premium: President hologram tests your sisu.', 'Stare back 4 hours', { sisu: 40, mieli: -10 }, 'Offer coffee and pulla', { mieli: 25, sisu: 15 }, true),
+  e('secret-moomin', 'Premium: Hidden Moomin valley charges €0 in feelings.', 'Pay with emotional support', { mieli: 30, raha: -5 }, 'Pay with money like tourist', { raha: -20, sisu: -10 }, true),
+  e('linux-sauna', 'Premium: Linus in sauna discusses kernel patches.', 'Contribute patch nervously', { sisu: 30, mieli: -15 }, 'Pretend to understand C', { mieli: 10, raha: 15 }, true),
+]

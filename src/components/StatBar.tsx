@@ -1,7 +1,7 @@
 import { Activity, Brain, Coins, Flame } from 'lucide-react'
 import { motion } from 'framer-motion'
-import type { Locale, StatKey, Stats } from '../types/game'
-import { getUi } from '../i18n/ui'
+import type { StatKey, Stats } from '../types/game'
+import { getStatLabel } from '../copy/strings'
 
 const STAT_ICONS: Record<StatKey, typeof Activity> = {
   terveys: Activity,
@@ -19,42 +19,45 @@ const STAT_COLORS: Record<StatKey, string> = {
 
 interface StatBarProps {
   stats: Stats
-  locale: Locale
 }
 
-export function StatBar({ stats, locale }: StatBarProps) {
-  const ui = getUi(locale)
+export function StatBar({ stats }: StatBarProps) {
   const keys: StatKey[] = ['terveys', 'raha', 'mieli', 'sisu']
 
   return (
-    <section className="grid grid-cols-2 gap-2 px-4 py-3">
+    <section className="grid grid-cols-2 gap-2 px-4 py-2">
       {keys.map((key) => {
         const Icon = STAT_ICONS[key]
         const value = stats[key]
-        const low = value <= 25
+        const critical = value <= 15
+        const low = value <= 30
 
         return (
           <div
             key={key}
-            className={`rounded-xl border bg-slate-900/60 p-2.5 ${
-              low ? 'border-red-500/50 shadow-[0_0_12px_rgba(239,68,68,0.3)]' : 'border-cyan-500/20'
+            className={`rounded-xl border bg-slate-900/70 p-2 ${
+              critical
+                ? 'animate-pulse border-red-500/60 shadow-[0_0_14px_rgba(239,68,68,0.35)]'
+                : low
+                  ? 'border-orange-500/40'
+                  : 'border-cyan-500/15'
             }`}
           >
-            <div className="mb-1.5 flex items-center justify-between gap-1">
-              <div className="flex items-center gap-1.5">
-                <Icon className={`h-4 w-4 ${low ? 'text-red-400' : 'text-cyan-300'}`} />
-                <span className="text-xs font-medium text-slate-300">{ui.stats[key]}</span>
+            <div className="mb-1 flex items-center justify-between">
+              <div className="flex items-center gap-1">
+                <Icon className={`h-3.5 w-3.5 ${critical ? 'text-red-400' : 'text-cyan-300'}`} />
+                <span className="text-[10px] font-semibold text-slate-300">{getStatLabel(key)}</span>
               </div>
-              <span className={`text-xs font-bold tabular-nums ${low ? 'text-red-400' : 'text-white'}`}>
-                {value}
+              <span className={`text-xs font-bold tabular-nums ${critical ? 'text-red-400' : 'text-white'}`}>
+                {value}%
               </span>
             </div>
-            <div className="h-2 overflow-hidden rounded-full bg-slate-800">
+            <div className="h-1.5 overflow-hidden rounded-full bg-slate-800">
               <motion.div
                 className={`h-full rounded-full bg-gradient-to-r ${STAT_COLORS[key]}`}
                 initial={false}
                 animate={{ width: `${value}%` }}
-                transition={{ type: 'spring', stiffness: 120, damping: 20 }}
+                transition={{ type: 'spring', stiffness: 140, damping: 22 }}
               />
             </div>
           </div>

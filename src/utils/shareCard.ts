@@ -1,18 +1,13 @@
-import type { Locale } from '../types/game'
-import { getTitle } from '../i18n/ui'
+import { getTitle } from '../copy/strings'
 
-export function buildShareText(locale: Locale, days: number, template: string): string {
-  const title = getTitle(locale, days)
+export function buildShareText(days: number, template: string): string {
+  const title = getTitle(days)
   const siteUrl = typeof window !== 'undefined' ? window.location.origin : 'https://finnish-survival.game'
   const body = template.replace('{days}', String(days)).replace('{title}', title)
   return `${body}\n\n${siteUrl}`
 }
 
-export async function generateShareImage(
-  days: number,
-  title: string,
-  locale: Locale,
-): Promise<Blob> {
+export async function generateShareImage(days: number, title: string): Promise<Blob> {
   const canvas = document.createElement('canvas')
   canvas.width = 1080
   canvas.height = 1920
@@ -32,24 +27,14 @@ export async function generateShareImage(
   ctx.fillStyle = '#22d3ee'
   ctx.font = 'bold 72px system-ui, sans-serif'
   ctx.textAlign = 'center'
-  const headlines: Record<Locale, string> = {
-    en: 'Finnish Survival',
-    fi: 'Suomen Selviytyjä',
-    ru: 'Финское Выживание',
-  }
-  ctx.fillText(headlines[locale], 540, 280)
+  ctx.fillText('Finnish Survival', 540, 280)
 
   ctx.fillStyle = '#e2e8f0'
   ctx.font = '48px system-ui, sans-serif'
-  const dayLabels: Record<Locale, string> = {
-    en: 'days survived',
-    fi: 'päivää selviytyi',
-    ru: 'дней выжил',
-  }
   ctx.fillText(String(days), 540, 520)
   ctx.font = '36px system-ui, sans-serif'
   ctx.fillStyle = '#94a3b8'
-  ctx.fillText(dayLabels[locale], 540, 580)
+  ctx.fillText('days survived', 540, 580)
 
   ctx.fillStyle = '#f8fafc'
   ctx.font = 'bold 42px system-ui, sans-serif'
@@ -57,12 +42,7 @@ export async function generateShareImage(
 
   ctx.fillStyle = '#38bdf8'
   ctx.font = '32px system-ui, sans-serif'
-  const challenge: Record<Locale, string> = {
-    en: 'Can you beat my record?',
-    fi: 'Voitko lyödä ennätykseni?',
-    ru: 'Сможешь побить рекорд?',
-  }
-  ctx.fillText(challenge[locale], 540, 1500)
+  ctx.fillText('Can you beat my record?', 540, 1500)
 
   ctx.font = '28px system-ui, sans-serif'
   ctx.fillStyle = '#64748b'
@@ -101,28 +81,23 @@ function wrapText(
 }
 
 export async function shareResult(
-  locale: Locale,
   days: number,
   shareTemplate: string,
 ): Promise<{ copied: boolean; shared: boolean }> {
-  const title = getTitle(locale, days)
-  const text = buildShareText(locale, days, shareTemplate)
+  const title = getTitle(days)
+  const text = buildShareText(days, shareTemplate)
   let shared = false
   let copied = false
 
   try {
-    const blob = await generateShareImage(days, title, locale)
+    const blob = await generateShareImage(days, title)
     const file = new File([blob], 'finnish-survival.png', { type: 'image/png' })
     if (navigator.share && navigator.canShare?.({ files: [file] })) {
-      await navigator.share({
-        title: 'Finnish Survival',
-        text,
-        files: [file],
-      })
+      await navigator.share({ title: 'Finnish Survival', text, files: [file] })
       shared = true
     }
   } catch {
-    /* fallback to text */
+    /* fallback */
   }
 
   if (!shared) {

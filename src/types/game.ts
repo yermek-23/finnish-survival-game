@@ -1,13 +1,5 @@
 export type StatKey = 'terveys' | 'raha' | 'mieli' | 'sisu'
 
-export type Locale = 'en' | 'fi' | 'ru'
-
-export interface LocalizedText {
-  en: string
-  fi: string
-  ru: string
-}
-
 export interface StatDelta {
   terveys?: number
   raha?: number
@@ -16,13 +8,13 @@ export interface StatDelta {
 }
 
 export interface Choice {
-  label: LocalizedText
+  label: string
   effects: StatDelta
 }
 
 export interface GameEvent {
   id: string
-  text: LocalizedText
+  text: string
   choiceA: Choice
   choiceB: Choice
   premiumOnly?: boolean
@@ -44,4 +36,4 @@ export const INITIAL_STATS: Stats = {
 
 export const STAT_MAX = 100
 export const STAT_MIN = 0
-export const INTERSTITIAL_EVERY_DAYS = 5
+export const ACTION_TIMER_MS = 5000

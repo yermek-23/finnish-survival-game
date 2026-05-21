@@ -1,79 +1,110 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
-import type { Locale } from './types/game'
 import { useGame } from './hooks/useGame'
 import { usePremium } from './hooks/usePremium'
+import { useBestScore } from './hooks/useBestScore'
 import { Header } from './components/Header'
 import { StatBar } from './components/StatBar'
 import { EventCard } from './components/EventCard'
 import { GameOverModal } from './components/GameOverModal'
 import { InterstitialAd } from './components/InterstitialAd'
 import { PremiumStore } from './components/PremiumStore'
+import { MainMenu } from './components/MainMenu'
+
+type Screen = 'menu' | 'game'
 
 function App() {
-  const [locale, setLocale] = useState<Locale>('en')
+  const [screen, setScreen] = useState<Screen>('menu')
   const [storeOpen, setStoreOpen] = useState(false)
   const { premium, showSuccess, purchasePremium, closeSuccess } = usePremium()
+  const { bestDays, recordRun } = useBestScore()
   const game = useGame({ premium })
 
-  const showAd =
-    !premium && game.phase === 'interstitial'
+  const showAd = screen === 'game' && !premium && game.phase === 'interstitial'
+  const showGameOver = screen === 'game' && game.phase === 'gameover' && game.failedStat
 
-  const showGameOver = game.phase === 'gameover' && game.failedStat
+  useEffect(() => {
+    if (showGameOver) recordRun(game.day)
+  }, [showGameOver, game.day, recordRun])
+
+  const handleStart = () => {
+    game.restart()
+    setScreen('game')
+  }
+
+  const handleGameOverMenu = () => {
+    if (game.failedStat) recordRun(game.day)
+    setScreen('menu')
+    game.restart()
+  }
+
+  const handleRestart = () => {
+    recordRun(game.day)
+    game.restart()
+  }
 
   return (
-    <div className="flex min-h-[100dvh] flex-col bg-[#0a1628] text-slate-100">
-      <Header
-        locale={locale}
-        onLocaleChange={setLocale}
-        premium={premium}
-        onOpenStore={() => setStoreOpen(true)}
-      />
+    <div className="flex min-h-[100dvh] flex-col bg-[#060d18] text-slate-100">
+      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(34,211,238,0.08)_0%,_transparent_55%)]" />
 
-      <StatBar stats={game.stats} locale={locale} />
-
-      {game.phase === 'playing' && (
-        <EventCard
-          key={game.event.id + game.day}
-          event={game.event}
-          day={game.day}
-          locale={locale}
-          onChoice={game.makeChoice}
+      {screen === 'menu' && (
+        <MainMenu
+          bestDays={bestDays}
+          premium={premium}
+          onStart={handleStart}
+          onOpenStore={() => setStoreOpen(true)}
         />
       )}
 
-      {game.phase === 'interstitial' && !premium && (
-        <div className="flex flex-1 items-center justify-center px-4 pb-8">
-          <p className="animate-pulse text-sm text-slate-500">Loading next challenge...</p>
-        </div>
+      {screen === 'game' && (
+        <>
+          <Header
+            day={game.day}
+            premium={premium}
+            onOpenStore={() => setStoreOpen(true)}
+            onMainMenu={handleGameOverMenu}
+          />
+          <StatBar stats={game.stats} />
+
+          {game.phase === 'playing' && (
+            <EventCard
+              key={`${game.event.id}-${game.day}`}
+              event={game.event}
+              day={game.day}
+              disabled={false}
+              panicFlash={game.panicFlash}
+              onChoice={game.makeChoice}
+              onPanic={game.triggerPanic}
+            />
+          )}
+
+          {game.phase === 'interstitial' && !premium && (
+            <div className="flex flex-1 items-center justify-center px-4 pb-8">
+              <p className="animate-pulse text-sm text-slate-500">Next Finnish chaos loading...</p>
+            </div>
+          )}
+        </>
       )}
 
       <AnimatePresence>
-        {showAd && (
-          <InterstitialAd
-            key="interstitial"
-            locale={locale}
-            onClose={game.dismissInterstitial}
-          />
-        )}
+        {showAd && <InterstitialAd key="ad" onClose={game.dismissInterstitial} />}
       </AnimatePresence>
 
       {showGameOver && (
         <GameOverModal
-          locale={locale}
           days={game.day}
           failedStat={game.failedStat!}
           premium={premium}
           hasSecondLife={game.hasSecondLife}
-          onRestart={game.restart}
+          onRestart={handleRestart}
           onSecondLife={game.secondLife}
           onOpenStore={() => setStoreOpen(true)}
+          onMainMenu={handleGameOverMenu}
         />
       )}
 
       {storeOpen && (
         <PremiumStore
-          locale={locale}
           premium={premium}
           showSuccess={showSuccess}
           onClose={() => setStoreOpen(false)}

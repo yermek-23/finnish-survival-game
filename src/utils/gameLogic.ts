@@ -11,6 +11,15 @@ export function applyEffects(stats: Stats, effects: StatDelta): Stats {
   return next
 }
 
+/** Panic penalty: -15% Sanity, -10% Health */
+export function applyPanicPenalty(stats: Stats): Stats {
+  return {
+    ...stats,
+    mieli: Math.max(STAT_MIN, Math.round(stats.mieli * 0.85)),
+    terveys: Math.max(STAT_MIN, Math.round(stats.terveys * 0.9)),
+  }
+}
+
 export function getFailedStat(stats: Stats): StatKey | null {
   const keys: StatKey[] = ['terveys', 'raha', 'mieli', 'sisu']
   for (const key of keys) {
@@ -24,13 +33,13 @@ export function pickRandomEvent(
   usedIds: Set<string>,
   premium: boolean,
 ): GameEvent {
-  const pool = events.filter((e) => {
-    if (usedIds.has(e.id)) return false
-    if (e.premiumOnly && !premium) return false
+  const pool = events.filter((ev) => {
+    if (usedIds.has(ev.id)) return false
+    if (ev.premiumOnly && !premium) return false
     return true
   })
 
-  const source = pool.length > 0 ? pool : events.filter((e) => !e.premiumOnly || premium)
+  const source = pool.length > 0 ? pool : events.filter((ev) => !ev.premiumOnly || premium)
   const index = Math.floor(Math.random() * source.length)
   return source[index]!
 }
