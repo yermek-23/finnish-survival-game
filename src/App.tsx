@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
+import { AppProvider, useApp } from './context/AppContext'
 import { useGame } from './hooks/useGame'
 import { usePremium } from './hooks/usePremium'
 import { useBestScore } from './hooks/useBestScore'
@@ -8,62 +9,68 @@ import { StatBar } from './components/StatBar'
 import { EventCard } from './components/EventCard'
 import { GameOverModal } from './components/GameOverModal'
 import { InterstitialAd } from './components/InterstitialAd'
-import { PremiumStore } from './components/PremiumStore'
+import { PaywallModal } from './components/PaywallModal'
+import { NicknameScreen } from './components/NicknameScreen'
 import { MainMenu } from './components/MainMenu'
+import { leaderboardService } from './services/leaderboardService'
 
-type Screen = 'menu' | 'game'
+type Screen = 'welcome' | 'menu' | 'game'
 
-function App() {
-  const [screen, setScreen] = useState<Screen>('menu')
-  const [storeOpen, setStoreOpen] = useState(false)
-  const { premium, showSuccess, purchasePremium, closeSuccess } = usePremium()
+function GameApp() {
+  const { player, ui } = useApp()
+  const [screen, setScreen] = useState<Screen>(() => (player ? 'menu' : 'welcome'))
+  const { premium, purchasePremium, restorePurchase } = usePremium()
   const { bestDays, recordRun } = useBestScore()
   const game = useGame({ premium })
 
   const showAd = screen === 'game' && !premium && game.phase === 'interstitial'
   const showGameOver = screen === 'game' && game.phase === 'gameover' && game.failedStat
+  const showPaywall = screen === 'game' && game.phase === 'paywall' && !premium
 
   useEffect(() => {
-    if (showGameOver) recordRun(game.day)
-  }, [showGameOver, game.day, recordRun])
+    if (showGameOver && player) {
+      recordRun(game.day)
+      void leaderboardService.submitScore(player.nickname, game.day)
+    }
+  }, [showGameOver, game.day, player, recordRun])
 
-  const handleStart = () => {
-    game.restart()
-    setScreen('game')
-  }
-
-  const handleGameOverMenu = () => {
-    if (game.failedStat) recordRun(game.day)
+  const goMenu = () => {
     setScreen('menu')
     game.restart()
   }
 
-  const handleRestart = () => {
-    recordRun(game.day)
-    game.restart()
+  const handleUnlock = () => {
+    purchasePremium()
+    game.continueAfterPaywall()
+  }
+
+  const handleRestore = () => {
+    if (restorePurchase()) game.continueAfterPaywall()
   }
 
   return (
-    <div className="flex min-h-[100dvh] flex-col bg-[#060d18] text-slate-100">
-      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(34,211,238,0.08)_0%,_transparent_55%)]" />
+    <div className="relative flex min-h-[100dvh] flex-col bg-[#060d18] text-slate-100">
+      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(34,211,238,0.07)_0%,_transparent_55%)]" />
 
-      {screen === 'menu' && (
+      {screen === 'welcome' && (
+        <NicknameScreen onContinue={() => setScreen('menu')} />
+      )}
+
+      {screen === 'menu' && player && (
         <MainMenu
           bestDays={bestDays}
           premium={premium}
-          onStart={handleStart}
-          onOpenStore={() => setStoreOpen(true)}
+          onStart={() => {
+            game.restart()
+            setScreen('game')
+          }}
+          onOpenStore={handleUnlock}
         />
       )}
 
-      {screen === 'game' && (
+      {screen === 'game' && player && (
         <>
-          <Header
-            day={game.day}
-            premium={premium}
-            onOpenStore={() => setStoreOpen(true)}
-            onMainMenu={handleGameOverMenu}
-          />
+          <Header day={game.day} premium={premium} onOpenStore={handleUnlock} onMainMenu={goMenu} />
           <StatBar stats={game.stats} />
 
           {game.phase === 'playing' && (
@@ -80,7 +87,7 @@ function App() {
 
           {game.phase === 'interstitial' && !premium && (
             <div className="flex flex-1 items-center justify-center px-4 pb-8">
-              <p className="animate-pulse text-sm text-slate-500">Next Finnish chaos loading...</p>
+              <p className="animate-pulse text-sm text-slate-500">{ui.loadingNext}</p>
             </div>
           )}
         </>
@@ -90,33 +97,32 @@ function App() {
         {showAd && <InterstitialAd key="ad" onClose={game.dismissInterstitial} />}
       </AnimatePresence>
 
+      {showPaywall && (
+        <PaywallModal days={game.day} onUnlock={handleUnlock} onRestore={handleRestore} />
+      )}
+
       {showGameOver && (
         <GameOverModal
           days={game.day}
           failedStat={game.failedStat!}
           premium={premium}
           hasSecondLife={game.hasSecondLife}
-          onRestart={handleRestart}
-          onSecondLife={game.secondLife}
-          onOpenStore={() => setStoreOpen(true)}
-          onMainMenu={handleGameOverMenu}
-        />
-      )}
-
-      {storeOpen && (
-        <PremiumStore
-          premium={premium}
-          showSuccess={showSuccess}
-          onClose={() => setStoreOpen(false)}
-          onPurchase={purchasePremium}
-          onCloseSuccess={() => {
-            closeSuccess()
-            setStoreOpen(false)
+          onRestart={() => {
+            recordRun(game.day)
+            game.restart()
           }}
+          onSecondLife={game.secondLife}
+          onMainMenu={goMenu}
         />
       )}
     </div>
   )
 }
 
-export default App
+export default function App() {
+  return (
+    <AppProvider>
+      <GameApp />
+    </AppProvider>
+  )
+}

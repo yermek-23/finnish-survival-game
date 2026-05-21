@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 import { EVENTS } from '../data/events'
-import type { GameEvent, StatKey, Stats } from '../types/game'
-import { INITIAL_STATS } from '../types/game'
+import type { GameEvent, GamePhase, StatKey, Stats } from '../types/game'
+import { DEMO_MAX_DAY, INITIAL_STATS } from '../types/game'
 import {
   applyEffects,
   applyPanicPenalty,
@@ -9,8 +9,6 @@ import {
   pickRandomEvent,
   shouldShowInterstitial,
 } from '../utils/gameLogic'
-
-export type GamePhase = 'playing' | 'gameover' | 'interstitial'
 
 interface UseGameOptions {
   premium: boolean
@@ -59,9 +57,22 @@ export function useGame({ premium }: UseGameOptions) {
       }
 
       const nextDay = currentDay + 1
+
+      if (!premium && nextDay > DEMO_MAX_DAY) {
+        setDay(nextDay)
+        setPhase('paywall')
+        return
+      }
+
       setDay(nextDay)
 
-      if (shouldShowInterstitial(nextDay, false)) {
+      if (!premium && shouldShowInterstitial(nextDay, false)) {
+        loadNextEvent(newUsed)
+        setPhase('interstitial')
+        return
+      }
+
+      if (premium && shouldShowInterstitial(nextDay, false)) {
         loadNextEvent(newUsed)
         setPhase('interstitial')
         return
@@ -69,7 +80,7 @@ export function useGame({ premium }: UseGameOptions) {
 
       loadNextEvent(newUsed)
     },
-    [loadNextEvent],
+    [loadNextEvent, premium],
   )
 
   const makeChoice = useCallback(
@@ -88,16 +99,18 @@ export function useGame({ premium }: UseGameOptions) {
     window.setTimeout(() => {
       setPanicFlash(false)
       resolveTurn(penalized, day, usedEventIds, event.id)
-    }, 1400)
+    }, 1500)
   }, [day, event.id, panicFlash, phase, resolveTurn, stats, usedEventIds])
 
   const dismissInterstitial = useCallback(() => {
-    if (failedStat) {
-      setPhase('gameover')
-    } else {
-      setPhase('playing')
-    }
+    if (failedStat) setPhase('gameover')
+    else setPhase('playing')
   }, [failedStat])
+
+  const continueAfterPaywall = useCallback(() => {
+    setPhase('playing')
+    loadNextEvent(usedEventIds)
+  }, [loadNextEvent, usedEventIds])
 
   const secondLife = useCallback(() => {
     if (!savedSnapshot) return
@@ -132,6 +145,7 @@ export function useGame({ premium }: UseGameOptions) {
     makeChoice,
     triggerPanic,
     dismissInterstitial,
+    continueAfterPaywall,
     secondLife,
     restart,
   }

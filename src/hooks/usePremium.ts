@@ -16,7 +16,15 @@ export function usePremium() {
     setShowSuccess(true)
   }, [])
 
+  const restorePurchase = useCallback((): boolean => {
+    if (localStorage.getItem(STORAGE_KEY) === '1') {
+      setPremium(true)
+      return true
+    }
+    return false
+  }, [])
+
   const closeSuccess = useCallback(() => setShowSuccess(false), [])
 
-  return { premium, showSuccess, purchasePremium, closeSuccess }
+  return { premium, showSuccess, purchasePremium, restorePurchase, closeSuccess }
 }
